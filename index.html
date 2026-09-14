@@ -156,6 +156,27 @@ body{
     max-width:820px;margin:0 auto;
   }
 }
+
+/* v11 dashboard */
+.homehero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:18px;align-items:stretch;margin-bottom:24px}
+.welcome{background:linear-gradient(135deg,#126b4b,#2aa876);color:#fff;border-radius:28px;padding:28px;min-height:205px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 18px 42px rgba(22,122,85,.18)}
+.welcome .eyebrow{color:rgba(255,255,255,.72)}
+.welcome .title{margin-top:12px;max-width:620px}
+.welcome .sub{color:rgba(255,255,255,.82);max-width:620px}
+.welcome .primary{width:auto;align-self:flex-start;background:#fff;color:#126b4b;box-shadow:none;padding:12px 16px;margin-top:18px}
+.statcard{background:#fff;border:1px solid var(--line);border-radius:28px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:space-between}
+.statlabel{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.statvalue{font-size:34px;font-weight:950;letter-spacing:-.04em;margin-top:8px}
+.statmeta{font-size:13px;color:var(--muted);line-height:1.45;margin-top:5px}
+.quickgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0 28px}
+.quick{border:1px solid var(--line);background:#fff;border-radius:18px;padding:15px;text-align:left;font-weight:850;box-shadow:0 7px 20px rgba(24,55,43,.05);transition:.15s}
+.quick:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(24,55,43,.09)}
+.quick span{display:block;font-size:21px;margin-bottom:8px}
+.quick small{display:block;color:var(--muted);font-weight:600;margin-top:3px;font-size:11px}
+.sectionline{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sectionlink{border:0;background:transparent;color:var(--accent);font-weight:850;padding:4px}
+@media(max-width:760px){.homehero{grid-template-columns:1fr}.welcome{min-height:230px}.quickgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:430px){.app{padding-left:14px;padding-right:14px}.top{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}.title{font-size:31px}.welcome{padding:22px;border-radius:24px}.statcard{border-radius:24px}.quickgrid{gap:9px}.quick{padding:13px;border-radius:16px}}
 </style>
 </head>
 <body>
@@ -163,14 +184,24 @@ body{
   <div class="top"><div><div class="brand">🥗 Food Planner</div><div class="hello" id="hello"></div></div><button class="langbtn" onclick="openLanguage()" id="langBtn">🌍 RU</button></div>
 
   <section id="home" class="screen active">
-    <div class="hero"><div class="eyebrow">FOOD PLANNER</div><div class="title" id="homeTitle"></div><p class="sub" id="homeSub"></p></div>
-    <div class="section" id="mySection"></div><div class="grid">
-      <button class="card big" onclick="go('today')"><div class="icon">📅</div><div class="ct" data-i18n="today"></div><div class="cm" data-i18n="todayDesc"></div></button>
-      <button class="card" onclick="go('week')"><div class="icon">📆</div><div class="ct" data-i18n="week"></div><div class="cm" data-i18n="weekDesc"></div></button>
-      <button class="card" onclick="go('shopping')"><div class="icon">🛒</div><div class="ct" data-i18n="shopping"></div><div class="cm" data-i18n="shoppingDesc"></div></button>
-      <button class="card" onclick="go('stores')"><div class="icon">📍</div><div class="ct" data-i18n="stores"></div><div class="cm" data-i18n="storesDesc"></div></button>
-      <button class="card" onclick="go('replace')"><div class="icon">🔄</div><div class="ct" data-i18n="replace"></div><div class="cm" data-i18n="replaceDesc"></div></button>
-      <button class="card" onclick="go('favorites')"><div class="icon">❤️</div><div class="ct" data-i18n="favorites"></div><div class="cm" data-i18n="favoritesDesc"></div></button>
+    <div class="homehero">
+      <div class="welcome">
+        <div><div class="eyebrow">FOOD PLANNER</div><div class="title" id="homeTitle"></div><p class="sub" id="homeSub"></p></div>
+        <button class="primary" onclick="go('today')">📅 <span data-i18n="today"></span></button>
+      </div>
+      <div class="statcard">
+        <div><div class="statlabel">Сегодня</div><div class="statvalue" id="homeMealCount">—</div><div class="statmeta" id="homeMealMeta">Твой план готовится…</div></div>
+        <button class="secondary" onclick="go('week')">📆 <span data-i18n="week"></span></button>
+      </div>
+    </div>
+    <div class="sectionline"><div class="section" id="mySection"></div><button class="sectionlink" onclick="startOnboarding(true)">⚙️ <span data-i18n="profile"></span></button></div>
+    <div class="quickgrid">
+      <button class="quick" onclick="go('shopping')"><span>🛒</span><span data-i18n="shopping"></span><small data-i18n="shoppingDesc"></small></button>
+      <button class="quick" onclick="go('stores')"><span>📍</span><span data-i18n="stores"></span><small data-i18n="storesDesc"></small></button>
+      <button class="quick" onclick="go('replace')"><span>🔄</span><span data-i18n="replace"></span><small data-i18n="replaceDesc"></small></button>
+      <button class="quick" onclick="go('favorites')"><span>❤️</span><span data-i18n="favorites"></span><small data-i18n="favoritesDesc"></small></button>
+    </div>
+    <div class="grid">
       <button class="card" onclick="go('ai')"><div class="icon">🤖</div><div class="ct" data-i18n="ai"></div><div class="cm" data-i18n="aiDesc"></div></button>
       <button class="card" onclick="go('nutrition')"><div class="icon">📊</div><div class="ct" data-i18n="nutrition"></div><div class="cm" data-i18n="nutritionDesc"></div></button>
       <button class="card" onclick="go('calories')"><div class="icon">🧮</div><div class="ct" data-i18n="calories"></div><div class="cm" data-i18n="caloriesDesc"></div></button>
@@ -275,7 +306,8 @@ function quickText(k,v){profile[k]=decodeURIComponent(v);renderStep()}
 function nextStep(){const s=steps[step];if(s.type==='age'){const el=document.getElementById('ageInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value}if(s.type==='text'){const el=document.getElementById('textInput');profile[s.key]=(el?.value||'').trim()||t(s.key==='allergies'?'noAllergy':'noDislike')}if(s.key==='budget'&&profile.budget==='Свой бюджет'){const el=document.getElementById('customBudget');profile.customBudget=(el?.value||'').trim()||t('budgetOwn')}if(s.type==='single'&&!profile[s.key]){toast(t('choose'));return}if(s.key==='meals'&&(!profile.meals||!profile.meals.length)){toast(t('mealRequired'));return}if(step<steps.length-1){step++;renderStep();return}finishProfile()}
 function prevStep(){if(step>0){step--;renderStep()}}
 function finishProfile(){profile.language=lang;if(!profile.meals||!profile.meals.length){toast(t('mealRequired'));return}profile.plan=buildPlan();profile.updatedAt=new Date().toISOString();saveProfile();renderAll();show('home');document.getElementById('nav').classList.remove('hidden');toast(editing?t('updated'):t('saved'))}
-function renderAll(){const name=tg?.initDataUnsafe?.user?.first_name;document.getElementById('hello').textContent=name?name+' 👋':t('hello');document.getElementById('homeTitle').textContent=name?(lang==='ru'?'Готово, ':'Ready, ')+name+'!':t('homeTitle');document.getElementById('homeSub').textContent=t('homeSub');document.getElementById('mySection').textContent=t('mySection');document.getElementById('footer').textContent=t('footer');document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');el.textContent=t(key)});document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.placeholder=t(el.getAttribute('data-i18n-placeholder')));document.getElementById('langBtn').textContent='🌍 '+I18N[lang].code;document.getElementById('profileSummary')?.remove();renderToday();renderWeek();renderShopping();renderReplace();renderFavorites();renderRadius();renderCalories();}
+function updateHomeSummary(){const el=document.getElementById('homeMealCount');const meta=document.getElementById('homeMealMeta');if(!el||!meta)return;const n=Array.isArray(profile?.plan)?profile.plan.length:0;el.textContent=n?n:'—';meta.textContent=n?(n===1?'Приём пищи запланирован':`Приёмов пищи сегодня: ${n}`):'Сначала составь свой рацион';}
+function renderAll(){const name=tg?.initDataUnsafe?.user?.first_name;document.getElementById('hello').textContent=name?name+' 👋':t('hello');document.getElementById('homeTitle').textContent=name?(lang==='ru'?'Готово, ':'Ready, ')+name+'!':t('homeTitle');document.getElementById('homeSub').textContent=t('homeSub');document.getElementById('mySection').textContent=t('mySection');document.getElementById('footer').textContent=t('footer');document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');el.textContent=t(key)});document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.placeholder=t(el.getAttribute('data-i18n-placeholder')));document.getElementById('langBtn').textContent='🌍 '+I18N[lang].code;document.getElementById('profileSummary')?.remove();renderToday();renderWeek();renderShopping();renderReplace();renderFavorites();renderRadius();renderCalories();updateHomeSummary();}
 function renderToday(){if(!profile?.plan?.length){document.getElementById('todayMeals').innerHTML=`<div class="info">${t('noPlan')}</div>`;return}document.getElementById('todaySub').textContent=t('todaySub');const adult=Number(profile.age||0)>=18;let total=0;const cards=profile.plan.map((x,i)=>{const kcal=dishKcal(x.dish);if(adult)total+=kcal;return `<div class="meal"><div class="mealhead"><span>${labels[x.key]?.[0]||''} ${labelMeal(x.key)}</span><span class="badge">${i===0?'':labelMeal(x.key)}</span></div><div class="dishname">${escapeHtml(dishText(x.dish))}</div>${adult&&kcal?`<div class="calmeal"><span>🔥 Калорийность блюда</span><span class="kcal">≈ ${kcal} ккал</span></div>`:''}<div class="portionbox"><b>⚖️ ${t('portion')}</b><br>${escapeHtml(portions[x.dish]||'—')}</div><button class="smallbtn" onclick="toggleFavorite(${i})">♡</button><button class="smallbtn" onclick="replaceDish(${i})">🔄</button></div>`}).join('');document.getElementById('todayMeals').innerHTML=cards+(adult?`<div class="daytotal">🔥 Итого за день: ≈ ${total} ккал</div>`:'')}
 function renderWeek(){document.getElementById('weekSub').textContent=t('weekSub');if(!profile?.meals?.length){document.getElementById('weekMeals').innerHTML=`<div class="info">${t('noPlan')}</div>`;return}let html='';const days=lang==='ru'?['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']:lang==='en'?['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']:lang==='nl'?['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag']:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];const used=[];for(let day=0;day<7;day++){html+=`<div class="weekday">${days[day]}</div><div class="meal">`;for(const key of profile.meals||[]){let opts=(dishes[key]||[]).filter(allowed).filter(x=>!used.slice(-3).includes(x));if(!opts.length)opts=(dishes[key]||[]).filter(allowed);const dish=opts.length?opts[(day+key.length+Number(profile.age||0))%opts.length]:'Подходящий вариант не найден';used.push(dish);html+=`${labels[key][0]} ${labelMeal(key)} · ${escapeHtml(dishText(dish))}<br>`}html+='</div>'}document.getElementById('weekMeals').innerHTML=html}
 function renderShopping(){document.getElementById('shoppingSub').textContent=t('shoppingSub');const map={'овсянка':'Овсянка','банан':'Бананы','ягод':'Ягоды','греч':'Гречка','фрукт':'Фрукты','яблок':'Яблоки','авокад':'Авокадо','овощ':'Овощи','йогурт':'Йогурт','творог':'Творог','рис':'Рис','сыр':'Сыр','орех':'Орехи','хлеб':'Хлеб','хлебц':'Хлебцы','куриц':'Курица','рыб':'Рыба','макарон':'Макароны','чечевиц':'Чечевица','картоф':'Картофель','индейк':'Индейка','булгур':'Булгур','нут':'Нут','фасол':'Фасоль','кефир':'Кефир','хумус':'Хумус','яйц':'Яйца'};let found=[];for(const x of profile?.plan||[]){const d=norm(x.dish);for(const k in map)if(d.includes(k)&&!found.includes(map[k]))found.push(map[k])}document.getElementById('shoppingList').innerHTML=found.length?found.map(x=>`<div class="item"><span class="box"></span>${escapeHtml(x)}</div>`).join(''):`<div class="item">${t('noPlan')}</div>`}
