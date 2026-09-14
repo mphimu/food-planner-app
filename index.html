@@ -304,10 +304,11 @@ function ageScore(d){const a=Number(profile.age||30);const x=norm(d);if(a>=60){i
 function pick(arr,used,key){let options=arr.filter(x=>allowed(x)&&!used.has(x));if(!options.length)options=arr.filter(allowed);if(!options.length)return 'Подходящий вариант не найден';const preferred=options.filter(x=>prefAllowedDish(key,x));if(preferred.length)options=preferred;options.sort((a,b)=>ageScore(b)-ageScore(a));const top=options.slice(0,Math.min(3,options.length));return top[Math.floor(Math.random()*top.length)]}
 function buildPlan(){const used=new Set();return (profile.meals||[]).map(key=>{const dish=pick(dishes[key]||[],used,key);used.add(dish);return {key,dish}})}
 function loadProfile(){try{return JSON.parse(localStorage.getItem(STORAGE))||null}catch(e){return null}} function saveProfile(){localStorage.setItem(STORAGE,JSON.stringify(profile));localStorage.setItem('food_planner_lang',lang)} function loadFav(){try{return JSON.parse(localStorage.getItem(FAVORITES))||[]}catch(e){return[]}} function saveFav(a){localStorage.setItem(FAVORITES,JSON.stringify(a))}
-function startOnboarding(edit=false){editing=edit;step=0;if(!profile)profile={};document.getElementById('nav').classList.add('hidden');show('onboarding');renderStep()}
+function startOnboarding(edit=false){editing=edit;step=0;if(!profile||typeof profile!=='object'||Array.isArray(profile))profile={};document.getElementById('nav').classList.add('hidden');show('onboarding');try{renderStep()}catch(e){console.error('Onboarding render failed',e);renderAgeFallback()}}
+function renderAgeFallback(){const title=t('ageQ')||'Сколько вам лет?';const sub=t('ageSub')||'Возраст нужен для персонального подбора рациона.';document.getElementById('onTitle').textContent=title;document.getElementById('progress').style.width=(100/Math.max(1,steps.length))+'%';document.getElementById('question').innerHTML=`<p class="sub">${escapeHtml(sub)}</p><input id="ageInput" class="input" type="number" min="6" max="120" inputmode="numeric" placeholder="${escapeHtml(t('agePlaceholder')||'Например: 18')}"><div class="hint">${escapeHtml(t('ageHint')||'Введите возраст числом.')}</div><div class="actions"><button class="primary" onclick="nextStep()">${escapeHtml(t('continue')||'Продолжить →')}</button></div>`}
 function editStep(index){if(!profile)return;editing=true;step=index;document.getElementById('nav').classList.add('hidden');show('onboarding');renderStep()}
 function renderProfile(){const box=document.getElementById('profileSummary');if(!box)return;const p=profile||{};const mealText=(p.meals||[]).map(labelMeal).join(', ')||t('profileNoData');const prefText=Object.entries(p.mealPrefs||{}).map(([k,v])=>v?.length?`${labelMeal(k)}: ${v.join(', ')}`:'').filter(Boolean).join(' • ')||t('profileNoData');const customText=Object.values(p.mealPrefsCustom||{}).flat().join(', ');const rows=[[0,'profileAge',p.age],[1,'profileActivity',p.activity],[2,'profileDiet',p.diet],[3,'profileAllergies',p.allergies],[4,'profileDislikes',p.dislikes],[5,'profileMeals',mealText],[6,'profilePrefs',customText?prefText+' • '+customText:prefText],[7,'profileBudget',p.budget==='Свой бюджет'?(p.customBudget||p.budget):p.budget],[8,'profileCooking',p.cooking]];box.innerHTML=rows.map(([idx,label,val])=>`<div class="profrow"><div class="profmain"><div class="proflabel">${escapeHtml(t(label))}</div><div class="profvalue">${escapeHtml(val||t('profileNoData'))}</div></div><button class="profedit" onclick="editStep(${idx===6?6:idx})">${escapeHtml(t('edit'))}</button></div>`).join('')}
-function renderStep(){const s=steps[step];document.getElementById('progress').style.width=((step+1)/steps.length*100)+'%';let title='',sub='';if(s.key==='age'){title=t('ageQ');sub=t('ageSub')}else if(s.key==='activity'){title=t('activityQ')}else if(s.key==='diet'){title=t('dietQ')}else if(s.key==='allergies'){title=t('allergiesQ');sub=t('allergiesSub')}else if(s.key==='dislikes'){title=t('dislikesQ')}else if(s.key==='meals'){title=t('mealsQ');sub=t('mealsSub')}else if(s.key==='mealPrefs'){title=t('prefsQ');sub=t('prefsSub')}else if(s.key==='budget'){title=t('budgetQ')}else if(s.key==='cooking'){title=t('cookingQ')}document.getElementById('onTitle').textContent=title;let html=`<div class="stepno">${t('step')} ${step+1} ${t('of')} ${steps.length}</div><p class="sub">${sub}</p>`;
+function renderStep(){if(!Array.isArray(steps)||!steps.length){renderAgeFallback();return}if(step<0||step>=steps.length)step=0;const s=steps[step];document.getElementById('progress').style.width=((step+1)/steps.length*100)+'%';let title='',sub='';if(s.key==='age'){title=t('ageQ');sub=t('ageSub')}else if(s.key==='activity'){title=t('activityQ')}else if(s.key==='diet'){title=t('dietQ')}else if(s.key==='allergies'){title=t('allergiesQ');sub=t('allergiesSub')}else if(s.key==='dislikes'){title=t('dislikesQ')}else if(s.key==='meals'){title=t('mealsQ');sub=t('mealsSub')}else if(s.key==='mealPrefs'){title=t('prefsQ');sub=t('prefsSub')}else if(s.key==='budget'){title=t('budgetQ')}else if(s.key==='cooking'){title=t('cookingQ')}document.getElementById('onTitle').textContent=title;let html=`<div class="stepno">${t('step')} ${step+1} ${t('of')} ${steps.length}</div><p class="sub">${sub}</p>`;
 if(s.type==='age'){html+=`<input id="ageInput" class="input" type="number" min="6" max="120" inputmode="numeric" placeholder="${t('agePlaceholder')}" value="${escapeHtml(profile.age||'')}"><div class="hint">${t('ageHint')}</div>`}
 else if(s.type==='single'){html+='<div class="choices">';for(const [v,e,d] of s.options){const sel=profile[s.key]===v?' selected':'';html+=`<button class="choice${sel}" onclick="selectSingle('${s.key}',decodeURIComponent('${encodeURIComponent(v)}'))"><span class="emoji">${e}</span><span><b>${escapeHtml(v)}</b>${d?`<div class="desc">${escapeHtml(d)}</div>`:''}</span><span class="check">${sel?'✓':''}</span></button>`}html+='</div>';if(s.key==='budget'&&profile.budget==='Свой бюджет')html+=`<input id="customBudget" class="input" placeholder="${t('customBudget')}" value="${escapeHtml(profile.customBudget||'')}">`}
 else if(s.type==='multi'){html+='<div class="choices">';for(const [v,e] of s.options){const sel=(profile.meals||[]).includes(v)?' selected':'';html+=`<button class="choice${sel}" onclick="toggleMeal('${v}')"><span class="emoji">${e}</span><span><b>${labelMeal(v)}</b></span><span class="check">${sel?'✓':''}</span></button>`}html+='</div>'}
@@ -394,13 +395,13 @@ function toast(x){const el=document.getElementById('toast');el.textContent=x;el.
     if(!API)return Promise.resolve(null);
     opts=opts||{};
     const headers=Object.assign({'Content-Type':'application/json','X-Device-ID':deviceId},opts.headers||{});
-    return fetch(API+path,Object.assign({},opts,{headers:headers})).then(r=>{
+    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);opts.signal=controller.signal;return fetch(API+path,Object.assign({},opts,{headers:headers})).then(r=>{
       if(!r.ok)throw new Error('API '+r.status);
       return r.status===204?null:r.json();
-    });
+    }).finally(()=>clearTimeout(timer));
   };
   window.fpLoadCloud=async function(){
-    if(!API)return;
+    if(!API)return null;
     try{
       const d=await fpApi('/api/state');
       if(d&&d.profile){
@@ -439,11 +440,8 @@ function toast(x){const el=document.getElementById('toast');el.textContent=x;el.
     return oldSend(action,data);
   };
   window.fpBoot=function(){
-    fpLoadCloud().finally(function(){
-      if(tg){tg.ready();tg.expand()}
-      if(profile){renderAll();document.getElementById('nav').classList.remove('hidden');show('home')}
-      else startOnboarding(false);
-    });
+    const finish=function(){try{if(tg){tg.ready();tg.expand()}if(profile&&typeof profile==='object'&&!Array.isArray(profile)){renderAll();document.getElementById('nav').classList.remove('hidden');show('home')}else{profile={};startOnboarding(false)}}catch(e){console.error('Food Planner boot failed',e);profile=profile&&typeof profile==='object'?profile:{};startOnboarding(false)}};
+    Promise.race([fpLoadCloud(),new Promise(r=>setTimeout(r,8500))]).then(finish);
   };
 })();
 
