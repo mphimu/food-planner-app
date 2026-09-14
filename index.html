@@ -183,7 +183,7 @@ body{
 <div class="app">
   <div class="top"><div><div class="brand">🥗 Food Planner</div><div class="hello" id="hello"></div></div><button class="langbtn" onclick="openLanguage()" id="langBtn">🌍 RU</button></div>
 
-  <section id="home" class="screen active">
+  <section id="home" class="screen">
     <div class="homehero">
       <div class="welcome">
         <div><div class="eyebrow">FOOD PLANNER</div><div class="title" id="homeTitle"></div><p class="sub" id="homeSub"></p></div>
@@ -233,7 +233,7 @@ body{
   <section id="calories" class="screen"><button class="back" onclick="go('home')" data-i18n="back"></button><div class="title" data-i18n="calories"></div><p class="sub" data-i18n="caloriesIntro"></p><div id="calorieForm"></div><div id="calorieResult"></div></section>
   <section id="profile" class="screen"><button class="back" onclick="go('home')" data-i18n="back"></button><div class="title" data-i18n="profile"></div><p class="sub" data-i18n="profileSavedSub"></p><div id="profileSummary"></div></section>
 
-  <section id="onboarding" class="screen"><div class="eyebrow">FOOD PLANNER</div><div class="title" id="onTitle"></div><div class="progress"><i id="progress"></i></div><div id="question"></div></section>
+  <section id="onboarding" class="screen active"><div class="eyebrow">FOOD PLANNER</div><div class="title" id="onTitle">Сколько вам лет?</div><div class="progress"><i id="progress" style="width:11.12%"></i></div><div id="question"><p class="sub">Возраст нужен для более персонального подбора рациона.</p><input id="ageInput" class="input" type="number" min="6" max="120" inputmode="numeric" placeholder="Например: 18"><div class="hint">Можно указать возраст числом.</div><div class="actions"><button class="primary" onclick="nextStep()">Продолжить →</button></div></div></section>
   <section id="language" class="screen"><button class="back" onclick="go('home')" data-i18n="back"></button><div class="title" data-i18n="languageTitle"></div><p class="sub" data-i18n="languageSub"></p><div id="languageChoices" class="choices"></div></section>
 </div>
 
@@ -303,7 +303,7 @@ function prefAllowedDish(key,d){const prefs=profile?.mealPrefs?.[key]||[];const 
 function ageScore(d){const a=Number(profile.age||30);const x=norm(d);if(a>=60){if(/омлет|рыб|картоф|чечевиц|греч|йогурт|творог|рис/.test(x))return 3;if(/макарон|бутерброд/.test(x))return 0}if(a<=12){if(/овсян|рис|греч|банан|йогурт|картоф|макарон/.test(x))return 3}if(a>=13&&a<=17){if(/овсян|греч|рис|куриц|рыб|чечевиц|овощ/.test(x))return 2}return 1}
 function pick(arr,used,key){let options=arr.filter(x=>allowed(x)&&!used.has(x));if(!options.length)options=arr.filter(allowed);if(!options.length)return 'Подходящий вариант не найден';const preferred=options.filter(x=>prefAllowedDish(key,x));if(preferred.length)options=preferred;options.sort((a,b)=>ageScore(b)-ageScore(a));const top=options.slice(0,Math.min(3,options.length));return top[Math.floor(Math.random()*top.length)]}
 function buildPlan(){const used=new Set();return (profile.meals||[]).map(key=>{const dish=pick(dishes[key]||[],used,key);used.add(dish);return {key,dish}})}
-function loadProfile(){try{return JSON.parse(localStorage.getItem(STORAGE))||null}catch(e){return null}} function saveProfile(){localStorage.setItem(STORAGE,JSON.stringify(profile));localStorage.setItem('food_planner_lang',lang)} function loadFav(){try{return JSON.parse(localStorage.getItem(FAVORITES))||[]}catch(e){return[]}} function saveFav(a){localStorage.setItem(FAVORITES,JSON.stringify(a))}
+function loadProfile(){try{return JSON.parse(localStorage.getItem(STORAGE))||null}catch(e){return null}} function saveProfile(){try{localStorage.setItem(STORAGE,JSON.stringify(profile));localStorage.setItem('food_planner_lang',lang)}catch(e){console.warn('Local storage unavailable',e)}} function loadFav(){try{return JSON.parse(localStorage.getItem(FAVORITES))||[]}catch(e){return[]}} function saveFav(a){try{localStorage.setItem(FAVORITES,JSON.stringify(a))}catch(e){console.warn('Favorites storage unavailable',e)}}
 function startOnboarding(edit=false){editing=edit;step=0;if(!profile||typeof profile!=='object'||Array.isArray(profile))profile={};document.getElementById('nav').classList.add('hidden');show('onboarding');try{renderStep()}catch(e){console.error('Onboarding render failed',e);renderAgeFallback()}}
 function renderAgeFallback(){const title=t('ageQ')||'Сколько вам лет?';const sub=t('ageSub')||'Возраст нужен для персонального подбора рациона.';document.getElementById('onTitle').textContent=title;document.getElementById('progress').style.width=(100/Math.max(1,steps.length))+'%';document.getElementById('question').innerHTML=`<p class="sub">${escapeHtml(sub)}</p><input id="ageInput" class="input" type="number" min="6" max="120" inputmode="numeric" placeholder="${escapeHtml(t('agePlaceholder')||'Например: 18')}"><div class="hint">${escapeHtml(t('ageHint')||'Введите возраст числом.')}</div><div class="actions"><button class="primary" onclick="nextStep()">${escapeHtml(t('continue')||'Продолжить →')}</button></div>`}
 function editStep(index){if(!profile)return;editing=true;step=index;document.getElementById('nav').classList.add('hidden');show('onboarding');renderStep()}
@@ -445,6 +445,7 @@ function toast(x){const el=document.getElementById('toast');el.textContent=x;el.
   };
 })();
 
+window.addEventListener('error',function(e){console.error('Food Planner JS error',e.error||e.message)});
 fpBoot();
 </script>
 </body></html>
