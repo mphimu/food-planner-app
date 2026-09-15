@@ -305,7 +305,7 @@ function prefAllowedDish(key,d){const prefs=profile?.mealPrefs?.[key]||[];const 
 function ageScore(d){const a=Number(profile.age||30);const x=norm(d);if(a>=60){if(/омлет|рыб|картоф|чечевиц|греч|йогурт|творог|рис/.test(x))return 3;if(/макарон|бутерброд/.test(x))return 0}if(a<=12){if(/овсян|рис|греч|банан|йогурт|картоф|макарон/.test(x))return 3}if(a>=13&&a<=17){if(/овсян|греч|рис|куриц|рыб|чечевиц|овощ/.test(x))return 2}return 1}
 function pick(arr,used,key){let options=arr.filter(x=>allowed(x)&&!used.has(x));if(!options.length)options=arr.filter(allowed);if(!options.length)return 'Подходящий вариант не найден';const preferred=options.filter(x=>prefAllowedDish(key,x));if(preferred.length)options=preferred;options.sort((a,b)=>ageScore(b)-ageScore(a));const top=options.slice(0,Math.min(3,options.length));return top[Math.floor(Math.random()*top.length)]}
 function buildPlan(){const used=new Set();return (profile.meals||[]).map(key=>{const dish=pick(dishes[key]||[],used,key);used.add(dish);return {key,dish}})}
-function loadProfile(){try{return JSON.parse(localStorage.getItem(STORAGE))||null}catch(e){return null}} function saveProfile(){try{localStorage.setItem(STORAGE,JSON.stringify(profile));localStorage.setItem('food_planner_lang',lang)}catch(e){console.warn('Local storage unavailable',e)}} function loadFav(){try{return JSON.parse(localStorage.getItem(FAVORITES))||[]}catch(e){return[]}} function saveFav(a){try{localStorage.setItem(FAVORITES,JSON.stringify(a))}catch(e){console.warn('Favorites storage unavailable',e)}}
+function safeGet(k){try{return localStorage.getItem(k)}catch(e){return null}} function safeSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){console.warn('Storage unavailable',e);return false}} function loadProfile(){try{return JSON.parse(safeGet(STORAGE)||'null')||null}catch(e){return null}} function saveProfile(){safeSet(STORAGE,JSON.stringify(profile));safeSet('food_planner_lang',lang)} function loadFav(){try{return JSON.parse(safeGet(FAVORITES)||'[]')||[]}catch(e){return[]}} function saveFav(a){safeSet(FAVORITES,JSON.stringify(a))}
 function startOnboarding(edit=false){editing=edit;step=0;if(!profile||typeof profile!=='object'||Array.isArray(profile))profile={};document.getElementById('nav').classList.add('hidden');show('onboarding');try{renderStep()}catch(e){console.error('Onboarding render failed',e);renderAgeFallback()}}
 function renderAgeFallback(){const title=t('ageQ')||'Сколько вам лет?';const sub=t('ageSub')||'Возраст нужен для персонального подбора рациона.';document.getElementById('onTitle').textContent=title;document.getElementById('progress').style.width=(100/Math.max(1,steps.length))+'%';document.getElementById('question').innerHTML=`<p class="sub">${escapeHtml(sub)}</p><input id="ageInput" class="input" type="number" min="6" max="120" inputmode="numeric" placeholder="${escapeHtml(t('agePlaceholder')||'Например: 18')}"><div class="hint">${escapeHtml(t('ageHint')||'Введите возраст числом.')}</div><div class="actions"><button class="primary" onclick="nextStep()">${escapeHtml(t('continue')||'Продолжить →')}</button></div>`}
 function editStep(index){if(!profile)return;editing=true;step=index;document.getElementById('nav').classList.add('hidden');show('onboarding');renderStep()}
@@ -378,9 +378,9 @@ function togglePref(k,v){profile.mealPrefs=profile.mealPrefs||{};profile.mealPre
 function addCustomPref(k){const el=document.getElementById('customPref-'+k);const v=(el?.value||'').trim();if(!v)return;profile.mealPrefsCustom=profile.mealPrefsCustom||{};profile.mealPrefsCustom[k]=profile.mealPrefsCustom[k]||[];if(!profile.mealPrefsCustom[k].includes(v))profile.mealPrefsCustom[k].push(v);saveProfile();toast(t('customPrefAdded'));renderStep()}
 function removeCustomPref(k,v){profile.mealPrefsCustom=profile.mealPrefsCustom||{};profile.mealPrefsCustom[k]=(profile.mealPrefsCustom[k]||[]).filter(x=>x!==v);saveProfile();renderStep()}
 function quickText(k,v){profile[k]=decodeURIComponent(v);renderStep()}
-function nextStep(){try{const s=steps[step];if(!s)throw new Error('Не найден шаг регистрации: '+step);if(s.type==='age'){const el=document.getElementById('ageInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value;saveProfile()}if(s.type==='text'){const el=document.getElementById('textInput');profile[s.key]=(el?.value||'').trim()||t(s.key==='allergies'?'noAllergy':'noDislike')}if(s.key==='budget'&&profile.budget==='Свой бюджет'){const el=document.getElementById('customBudget');profile.customBudget=(el?.value||'').trim()||t('budgetOwn')}if(s.type==='single'&&!profile[s.key]){toast(t('choose'));return}if(s.key==='meals'&&(!profile.meals||!profile.meals.length)){toast(t('mealRequired'));return}if(editing){profile.updatedAt=new Date().toISOString();saveProfile();renderAll();show('profile');document.getElementById('nav').classList.remove('hidden');toast(t('profileEditDone'));return}if(step<steps.length-1){step++;renderStep();return}finishProfile()}catch(e){console.error('nextStep failed',e);const q=document.getElementById('question');if(q)q.innerHTML='<div class="info">Произошла ошибка на этом шаге. Обнови страницу и попробуй ещё раз.</div><div class="actions"><button class="primary" onclick="window.location.reload()">Обновить</button></div>';}}
+function nextStep(){try{const s=steps[step];if(!s)throw new Error('Не найден шаг регистрации: '+step);if(s.type==='age'){const el=document.getElementById('ageInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value;saveProfile()}if(s.type==='text'){const el=document.getElementById('textInput');profile[s.key]=(el?.value||'').trim()||t(s.key==='allergies'?'noAllergy':'noDislike')}if(s.key==='budget'&&profile.budget==='Свой бюджет'){const el=document.getElementById('customBudget');profile.customBudget=(el?.value||'').trim()||t('budgetOwn')}if(s.type==='single'&&!profile[s.key]){toast(t('choose'));return}if(s.key==='meals'&&(!profile.meals||!profile.meals.length)){toast(t('mealRequired'));return}if(editing){profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();renderAll();show('profile');document.getElementById('nav').classList.remove('hidden');toast(t('profileEditDone'));return}if(step<steps.length-1){step++;renderStep();return}finishProfile()}catch(e){console.error('nextStep failed',e);const q=document.getElementById('question');if(q)q.innerHTML='<div class="info">Произошла ошибка на этом шаге. Обнови страницу и попробуй ещё раз.</div><div class="actions"><button class="primary" onclick="window.location.reload()">Обновить</button></div>';}}
 function prevStep(){if(step>0){step--;renderStep()}}
-function finishProfile(){profile.language=lang;if(!profile.meals||!profile.meals.length){toast(t('mealRequired'));return}profile.plan=buildPlan();profile.updatedAt=new Date().toISOString();saveProfile();editing=false;renderAll();show('home');document.getElementById('nav').classList.remove('hidden');toast(t('saved'))}
+function finishProfile(){profile.language=lang;if(!profile.meals||!profile.meals.length){toast(t('mealRequired'));return}profile.plan=buildPlan();profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();editing=false;renderAll();show('home');document.getElementById('nav').classList.remove('hidden');toast(t('saved'))}
 function updateHomeSummary(){const el=document.getElementById('homeMealCount');const meta=document.getElementById('homeMealMeta');if(!el||!meta)return;const n=Array.isArray(profile?.plan)?profile.plan.length:0;el.textContent=n?n:'—';meta.textContent=n?(n===1?'Приём пищи запланирован':`Приёмов пищи сегодня: ${n}`):'Сначала составь свой рацион';}
 function renderAll(){const name=tg?.initDataUnsafe?.user?.first_name;document.getElementById('hello').textContent=name?name+' 👋':t('hello');document.getElementById('homeTitle').textContent=name?(lang==='ru'?'Готово, ':'Ready, ')+name+'!':t('homeTitle');document.getElementById('homeSub').textContent=t('homeSub');document.getElementById('mySection').textContent=t('mySection');document.getElementById('footer').textContent=t('footer');document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');el.textContent=t(key)});document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.placeholder=t(el.getAttribute('data-i18n-placeholder')));document.getElementById('langBtn').textContent='🌍 '+I18N[lang].code;document.getElementById('profileSummary')?.remove();renderToday();renderWeek();renderShopping();renderReplace();renderFavorites();renderRadius();renderCalories();renderProfile();updateHomeSummary();}
 function renderToday(){if(!profile?.plan?.length){document.getElementById('todayMeals').innerHTML=`<div class="info">${t('noPlan')}</div>`;return}document.getElementById('todaySub').textContent=t('todaySub');const adult=Number(profile.age||0)>=18;let total=0;const cards=profile.plan.map((x,i)=>{const kcal=dishKcal(x.dish);if(adult)total+=kcal;return `<div class="meal"><div class="mealhead"><span>${labels[x.key]?.[0]||''} ${labelMeal(x.key)}</span><span class="badge">${i===0?'':labelMeal(x.key)}</span></div><div class="dishname">${escapeHtml(dishText(x.dish))}</div>${adult&&kcal?`<div class="calmeal"><span>🔥 Калорийность блюда</span><span class="kcal">≈ ${kcal} ккал</span></div>`:''}<div class="portionbox"><b>⚖️ ${t('portion')}</b><br>${escapeHtml(portions[x.dish]||'—')}</div><button class="smallbtn" onclick="toggleFavorite(${i})">♡</button><button class="smallbtn" onclick="replaceDish(${i})">🔄</button></div>`}).join('');document.getElementById('todayMeals').innerHTML=cards+(adult?`<div class="daytotal">🔥 Итого за день: ≈ ${total} ккал</div>`:'')}
@@ -388,9 +388,9 @@ function renderWeek(){document.getElementById('weekSub').textContent=t('weekSub'
 function renderShopping(){document.getElementById('shoppingSub').textContent=t('shoppingSub');const map={'овсянка':'Овсянка','банан':'Бананы','ягод':'Ягоды','греч':'Гречка','фрукт':'Фрукты','яблок':'Яблоки','авокад':'Авокадо','овощ':'Овощи','йогурт':'Йогурт','творог':'Творог','рис':'Рис','сыр':'Сыр','орех':'Орехи','хлеб':'Хлеб','хлебц':'Хлебцы','куриц':'Курица','рыб':'Рыба','макарон':'Макароны','чечевиц':'Чечевица','картоф':'Картофель','индейк':'Индейка','булгур':'Булгур','нут':'Нут','фасол':'Фасоль','кефир':'Кефир','хумус':'Хумус','яйц':'Яйца'};let found=[];for(const x of profile?.plan||[]){const d=norm(x.dish);for(const k in map)if(d.includes(k)&&!found.includes(map[k]))found.push(map[k])}document.getElementById('shoppingList').innerHTML=found.length?found.map(x=>`<div class="item"><span class="box"></span>${escapeHtml(x)}</div>`).join(''):`<div class="item">${t('noPlan')}</div>`}
 function renderReplace(){document.getElementById('replaceList').innerHTML=(profile?.plan||[]).map((x,i)=>`<div class="meal"><div class="mealhead"><span>${labels[x.key][0]} ${labelMeal(x.key)}</span></div><div class="dishname">${escapeHtml(dishText(x.dish))}</div><button class="smallbtn" onclick="replaceDish(${i})">🔄</button></div>`).join('')}
 function replaceDish(i){const x=profile.plan[i];const options=(dishes[x.key]||[]).filter(allowed).filter(d=>d!==x.dish);if(!options.length){toast(t('noReplace'));return}profile.plan[i]= {key:x.key,dish:options[Math.floor(Math.random()*options.length)]};saveProfile();renderAll();toast(t('replaceDone'))}
-function toggleFavorite(i){const fav=loadFav();const d=profile.plan[i].dish;if(!fav.includes(d))fav.push(d);else fav.splice(fav.indexOf(d),1);saveFav(fav);renderFavorites();toast(lang==='ru'?'Избранное обновлено':'Favorites updated')}
+function toggleFavorite(i){const fav=loadFav();const d=profile.plan[i].dish;if(!fav.includes(d))fav.push(d);else fav.splice(fav.indexOf(d),1);saveFav(fav);syncFavoritesCloud(fav);renderFavorites();toast(lang==='ru'?'Избранное обновлено':'Favorites updated')}
 function renderFavorites(){const fav=loadFav();document.getElementById('favoritesList').innerHTML=fav.length?fav.map((x,i)=>`<div class="meal"><div class="dishname">❤️ ${escapeHtml(dishText(x))}</div><button class="smallbtn" onclick="removeFav(${i})">${t('remove')}</button></div>`).join(''):`<div class="info">${t('noFav')}</div>`}
-function removeFav(i){const a=loadFav();a.splice(i,1);saveFav(a);renderFavorites()}
+function removeFav(i){const a=loadFav();a.splice(i,1);saveFav(a);syncFavoritesCloud(a);renderFavorites()}
 function renderRadius(){document.getElementById('radiusRow').innerHTML=[1,2,5,10].map(x=>`<button class="pill ${radius===x?'active':''}" onclick="setRadius(${x})">${x} ${t('km')}</button>`).join('')}
 function setRadius(x){radius=x;renderRadius()}
 async function findStoresByLocation(){
@@ -424,7 +424,7 @@ function setStoreStatus(x){document.getElementById('storeStatus').textContent=x}
 function openLanguage(){show('language');document.getElementById('nav').classList.add('hidden');document.getElementById('languageChoices').innerHTML=LANG_NAMES.map(([k,n])=>`<button class="choice ${lang===k?'selected':''}" onclick="setLanguage('${k}')"><span class="emoji">${n.split(' ')[0]}</span><span><b>${n.substring(n.indexOf(' ')+1)}</b></span><span class="check">${lang===k?'✓':''}</span></button>`).join('')}
 
 function renderCalories(){const age=Number(profile?.age||0);const f=document.getElementById('calorieForm');const r=document.getElementById('calorieResult');if(!f)return;if(age&&age<18){f.innerHTML=`<div class="info">${t('caloriesMinor')}<div class="ageedit"><b>${t('changeAge')}</b><div class="ageeditrow"><input id="ageEditInput" class="input" type="number" min="6" max="120" inputmode="numeric" value="${escapeHtml(age)}"><button class="smallbtn" onclick="saveAgeOnly()">${t('updated')}</button></div></div></div>`;r.innerHTML='';return}f.innerHTML=`<input id="cSex" class="input" placeholder="${t('sexPlaceholder')}"><input id="cWeight" class="input" type="number" min="30" max="300" placeholder="${t('weightPlaceholder')}"><input id="cHeight" class="input" type="number" min="120" max="230" placeholder="${t('heightPlaceholder')}"><select id="cActivity" class="input"><option value="1.2">${t('actLow')}</option><option value="1.375">${t('actLight')}</option><option value="1.55">${t('actModerate')}</option><option value="1.725">${t('actHigh')}</option><option value="1.9">${t('actVeryHigh')}</option></select><button class="primary" onclick="calculateCalories()">${t('calcCalories')}</button><div class="hint">${t('calorieDisclaimer')}</div><div class="ageedit"><b>${t('changeAge')}</b><div class="ageeditrow"><input id="ageEditInput" class="input" type="number" min="6" max="120" value="${escapeHtml(age||'')}"><button class="smallbtn" onclick="saveAgeOnly()">${t('updated')}</button></div></div>`}
-function saveAgeOnly(){const el=document.getElementById('ageEditInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value;profile.language=lang;saveProfile();renderAll();toast(t('updated'))}
+function saveAgeOnly(){const el=document.getElementById('ageEditInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value;profile.language=lang;saveProfile();syncProfileCloud();renderAll();toast(t('updated'))}
 function calculateCalories(){const age=Number(profile?.age||0);if(!age||age<18){renderCalories();return}const sex=(document.getElementById('cSex').value||'').toLowerCase();const w=Number(document.getElementById('cWeight').value),h=Number(document.getElementById('cHeight').value),a=Number(document.getElementById('cActivity').value);if(!w||!h||!a||!['м','ж','m','f','male','female'].some(x=>sex.startsWith(x))){toast(t('calorieInputError'));return}const bmr=(sex.startsWith('м')||sex.startsWith('m'))?(10*w+6.25*h-5*age+5):(10*w+6.25*h-5*age-161);const total=Math.round(bmr*a);document.getElementById('calorieResult').innerHTML=`<div class="meal"><div class="dishname">${t('calorieResult')}</div><div class="title" style="font-size:28px">≈ ${total} kcal/day</div><div class="hint">${t('calorieResultNote')}</div></div>`}
 
 function setLanguage(k){lang=k;profile=profile||{};profile.language=lang;saveProfile();renderAll();document.getElementById('nav').classList.remove('hidden');go('home')}
@@ -439,81 +439,51 @@ function toast(x){const el=document.getElementById('toast');el.textContent=x;el.
 </script>
 <script>
 
-/* FOOD PLANNER CORE — persistent API bridge */
+/* FOOD PLANNER CORE — local-first, cloud sync is optional */
 (function(){
   const API=(window.FOOD_API_URL||'').replace(/\/$/,'');
-  const KEY='food_planner_device_id_v1';
-  let deviceId=localStorage.getItem(KEY);
-  if(!deviceId){
-    deviceId=(crypto.randomUUID?crypto.randomUUID():('fp-'+Date.now()+'-'+Math.random().toString(36).slice(2)));
-    localStorage.setItem(KEY,deviceId);
-  }
+  const KEY='food_planner_device_id_v2';
+  let deviceId=safeGet(KEY);
+  try{if(!deviceId){deviceId=(window.crypto&&typeof window.crypto.randomUUID==='function')?window.crypto.randomUUID():('fp-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));safeSet(KEY,deviceId)}}catch(e){deviceId='fp-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)}
   window.fpApi=function(path,opts){
-    if(!API)return Promise.resolve(null);
+    if(!API)return Promise.reject(new Error('API not configured'));
     opts=opts||{};
     const headers=Object.assign({'Content-Type':'application/json','X-Device-ID':deviceId},opts.headers||{});
-    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);opts.signal=controller.signal;return fetch(API+path,Object.assign({},opts,{headers:headers})).then(r=>{
-      if(!r.ok)throw new Error('API '+r.status);
-      return r.status===204?null:r.json();
-    }).finally(()=>clearTimeout(timer));
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),6000);
+    const fetchOpts=Object.assign({},opts,{headers,signal:controller.signal});
+    return fetch(API+path,fetchOpts).then(r=>{if(!r.ok)throw new Error('API '+r.status);return r.status===204?null:r.json()}).finally(()=>clearTimeout(timer));
+  };
+  window.syncProfileCloud=function(){
+    if(!API||!profile)return;
+    fpApi('/api/profile',{method:'PUT',body:JSON.stringify({profile})}).catch(()=>{});
+  };
+  window.syncFavoritesCloud=function(a){
+    if(!API)return;
+    fpApi('/api/favorites',{method:'PUT',body:JSON.stringify({favorites:a})}).catch(()=>{});
   };
   window.fpLoadCloud=async function(){
     if(!API)return null;
-    try{
-      const d=await fpApi('/api/state');
-      if(d&&d.profile){
-        profile=d.profile;
-        lang=profile.language||lang;
-        localStorage.setItem(STORAGE,JSON.stringify(profile));
-      }
-      if(d&&Array.isArray(d.favorites)){
-        localStorage.setItem(FAVORITES,JSON.stringify(d.favorites));
-      }
-    }catch(e){console.warn('Food Planner API unavailable; local data kept',e)}
-  };
-  const oldSaveProfile=window.saveProfile;
-  window.saveProfile=function(){
-    oldSaveProfile();
-    if(API&&profile){
-      fpApi('/api/profile',{method:'PUT',body:JSON.stringify({profile:profile})})
-        .catch(e=>console.warn('Profile sync failed',e));
-    }
-  };
-  const oldSaveFav=window.saveFav;
-  window.saveFav=function(a){
-    oldSaveFav(a);
-    if(API)fpApi('/api/favorites',{method:'PUT',body:JSON.stringify({favorites:a})})
-      .catch(e=>console.warn('Favorites sync failed',e));
-  };
-  const oldSend=window.send;
-  window.send=function(action,data){
-    if(action==='save_profile'&&API&&data){
-      fpApi('/api/profile',{method:'PUT',body:JSON.stringify({profile:data})})
-        .then(()=>toast('Данные сохранены ☁️'))
-        .catch(()=>toast('Локально сохранено'));
-      if(tg)tg.sendData(JSON.stringify({action:'save_profile',profile:data}));
-      return;
-    }
-    return oldSend(action,data);
+    try{return await fpApi('/api/state')}catch(e){return null}
   };
   window.fpBoot=function(){
     try{if(tg){tg.ready();tg.expand()}}catch(e){}
     try{
-      if(profile&&typeof profile==='object'&&!Array.isArray(profile)&&profile.age){
-        renderAll();document.getElementById('nav').classList.remove('hidden');show('home');
-      }else{
-        profile=profile&&typeof profile==='object'&&!Array.isArray(profile)?profile:{};startOnboarding(false);
+      if(profile&&typeof profile==='object'&&!Array.isArray(profile)&&profile.age){renderAll();document.getElementById('nav').classList.remove('hidden');show('home');}
+      else{profile={};startOnboarding(false);}
+    }catch(e){console.error('Food Planner boot failed',e);profile={};try{startOnboarding(false)}catch(_){} }
+    // Cloud is a backup, never a dependency for opening or completing the app.
+    setTimeout(async()=>{
+      const cloud=await fpLoadCloud();
+      if(!profile?.age && cloud?.profile?.age){
+        profile=cloud.profile;lang=profile.language||lang;saveProfile();if(Array.isArray(cloud.favorites))saveFav(cloud.favorites);
+        try{renderAll();document.getElementById('nav').classList.remove('hidden');show('home')}catch(e){}
       }
-    }catch(e){
-      console.error('Food Planner boot failed',e);
-      profile={};startOnboarding(false);
-    }
-    // Cloud sync happens after the UI is already usable.
-    setTimeout(()=>{fpLoadCloud().then(()=>{try{if(profile&&profile.age){renderAll();document.getElementById('nav').classList.remove('hidden');show('home')}}catch(e){console.warn(e)}})},250);
+    },500);
   };
 })();
 
-window.addEventListener('error',function(e){console.error('Food Planner JS error',e.error||e.message);try{const q=document.getElementById('question');if(q&&document.getElementById('onboarding')?.classList.contains('active')){q.insertAdjacentHTML('beforeend','<div class="info">Не удалось выполнить этот шаг. Обнови страницу — введённые данные сохранены.</div>')}}catch(_){} });
+window.addEventListener('error',function(e){console.error('Food Planner JS error',e.error||e.message);try{const q=document.getElementById('question');if(q&&document.getElementById('onboarding')?.classList.contains('active')){q.insertAdjacentHTML('beforeend','<div class="info">Не удалось выполнить этот шаг. Данные сохранены локально. Можно продолжить после обновления.</div>')}}catch(_){} });
 fpBoot();
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script></body></html>
