@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ru">
-<head><meta name="food-planner-version" content="16">
+<head><meta name="food-planner-version" content="17-fix">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Food Planner</title>
@@ -310,6 +310,39 @@ function startOnboarding(edit=false){editing=edit;step=0;if(!profile||typeof pro
 function renderAgeFallback(){const title=t('ageQ')||'Сколько вам лет?';const sub=t('ageSub')||'Возраст нужен для персонального подбора рациона.';document.getElementById('onTitle').textContent=title;document.getElementById('progress').style.width=(100/Math.max(1,steps.length))+'%';document.getElementById('question').innerHTML=`<p class="sub">${escapeHtml(sub)}</p><input id="ageInput" class="input" type="number" min="6" max="120" inputmode="numeric" placeholder="${escapeHtml(t('agePlaceholder')||'Например: 18')}"><div class="hint">${escapeHtml(t('ageHint')||'Введите возраст числом.')}</div><div class="actions"><button class="primary" onclick="nextStep()">${escapeHtml(t('continue')||'Продолжить →')}</button></div>`}
 function editStep(index){if(!profile)return;editing=true;step=index;document.getElementById('nav').classList.add('hidden');show('onboarding');renderStep()}
 function renderProfile(){const box=document.getElementById('profileSummary');if(!box)return;const p=profile||{};const mealText=(p.meals||[]).map(labelMeal).join(', ')||t('profileNoData');const prefText=Object.entries(p.mealPrefs||{}).map(([k,v])=>v?.length?`${labelMeal(k)}: ${v.join(', ')}`:'').filter(Boolean).join(' • ')||t('profileNoData');const customText=Object.values(p.mealPrefsCustom||{}).flat().join(', ');const rows=[[0,'profileAge',p.age],[1,'profileGoal',p.goal],[2,'profileActivity',p.activity],[3,'profileDiet',p.diet],[4,'profileAllergies',p.allergies],[5,'profileDislikes',p.dislikes],[6,'profileMeals',mealText],[7,'profilePrefs',customText?prefText+' • '+customText:prefText],[8,'profileBudget',p.budget==='Свой бюджет'?(p.customBudget||p.budget):p.budget],[9,'profileCooking',p.cooking]];box.innerHTML=rows.map(([idx,label,val])=>`<div class="profrow"><div class="profmain"><div class="proflabel">${escapeHtml(t(label))}</div><div class="profvalue">${escapeHtml(val||t('profileNoData'))}</div></div><button class="profedit" onclick="editStep(${idx})">${escapeHtml(t('edit'))}</button></div>`).join('')}
+function renderGoalFallback(){
+  const root=document.getElementById('question');
+  const titleEl=document.getElementById('onTitle');
+  const progress=document.getElementById('progress');
+  if(!root||!titleEl||!progress)return;
+  titleEl.textContent=t('goalQ')||'Цель питания';
+  progress.style.width=((2/steps.length)*100)+'%';
+  let html='<p class="sub">'+escapeHtml(t('goalSub')||'Выбери общую цель рациона.')+'</p><div class="choices">';
+  for(const [v,e,d] of GOAL_OPTIONS){
+    html+='<button type="button" class="choice'+(profile.goal===v?' selected':'')+'" data-goal-safe="'+encodeURIComponent(v)+'"><span class="emoji">'+e+'</span><span><b>'+escapeHtml(v)+'</b><div class="desc">'+escapeHtml(d)+'</div></span><span class="check">'+(profile.goal===v?'✓':'')+'</span></button>';
+  }
+  html+='</div><div class="actions"><button type="button" class="secondary" id="goalBackSafe">← '+escapeHtml(t('back').replace('← ',''))+'</button><button type="button" class="primary" id="goalNextSafe">'+escapeHtml(t('continue')||'Продолжить →')+'</button></div>';
+  root.innerHTML=html;
+  root.querySelectorAll('[data-goal-safe]').forEach(b=>b.addEventListener('click',()=>{profile.goal=decodeURIComponent(b.dataset.goalSafe);saveProfile();renderGoalFallback();}));
+  root.querySelector('#goalBackSafe')?.addEventListener('click',prevStep);
+  root.querySelector('#goalNextSafe')?.addEventListener('click',()=>{if(!profile.goal){toast(t('choose'));return;}step=2;try{renderStep()}catch(e){console.error('activity render failed',e);renderSimpleSingleStep();}});
+}
+function renderSimpleSingleStep(){
+  const root=document.getElementById('question');
+  const titleEl=document.getElementById('onTitle');
+  const progress=document.getElementById('progress');
+  const s=steps[step];
+  if(!root||!titleEl||!progress||!s)return;
+  titleEl.textContent=t(s.key+'Q')||s.key;
+  progress.style.width=((step+1)/steps.length*100)+'%';
+  let html='<p class="sub"></p><div class="choices">';
+  for(const [v,e,d] of (s.options||[])){html+='<button type="button" class="choice'+(profile[s.key]===v?' selected':'')+'" data-safe-value="'+encodeURIComponent(v)+'"><span class="emoji">'+e+'</span><span><b>'+escapeHtml(v)+'</b></span><span class="check">'+(profile[s.key]===v?'✓':'')+'</span></button>'}
+  html+='</div><div class="actions"><button type="button" class="secondary" id="safePrev">← '+escapeHtml(t('back').replace('← ',''))+'</button><button type="button" class="primary" id="safeNext">'+escapeHtml(t('continue')||'Продолжить →')+'</button></div>';
+  root.innerHTML=html;
+  root.querySelectorAll('[data-safe-value]').forEach(b=>b.addEventListener('click',()=>{profile[s.key]=decodeURIComponent(b.dataset.safeValue);renderSimpleSingleStep();}));
+  root.querySelector('#safePrev')?.addEventListener('click',prevStep);
+  root.querySelector('#safeNext')?.addEventListener('click',nextStep);
+}
 function renderStep(){
   const root=document.getElementById('question');
   const titleEl=document.getElementById('onTitle');
@@ -378,7 +411,7 @@ function togglePref(k,v){profile.mealPrefs=profile.mealPrefs||{};profile.mealPre
 function addCustomPref(k){const el=document.getElementById('customPref-'+k);const v=(el?.value||'').trim();if(!v)return;profile.mealPrefsCustom=profile.mealPrefsCustom||{};profile.mealPrefsCustom[k]=profile.mealPrefsCustom[k]||[];if(!profile.mealPrefsCustom[k].includes(v))profile.mealPrefsCustom[k].push(v);saveProfile();toast(t('customPrefAdded'));renderStep()}
 function removeCustomPref(k,v){profile.mealPrefsCustom=profile.mealPrefsCustom||{};profile.mealPrefsCustom[k]=(profile.mealPrefsCustom[k]||[]).filter(x=>x!==v);saveProfile();renderStep()}
 function quickText(k,v){profile[k]=decodeURIComponent(v);renderStep()}
-function nextStep(){try{const s=steps[step];if(!s)throw new Error('Не найден шаг регистрации: '+step);if(s.type==='age'){const el=document.getElementById('ageInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value;saveProfile()}if(s.type==='text'){const el=document.getElementById('textInput');profile[s.key]=(el?.value||'').trim()||t(s.key==='allergies'?'noAllergy':'noDislike')}if(s.key==='budget'&&profile.budget==='Свой бюджет'){const el=document.getElementById('customBudget');profile.customBudget=(el?.value||'').trim()||t('budgetOwn')}if(s.type==='single'&&!profile[s.key]){toast(t('choose'));return}if(s.key==='meals'&&(!profile.meals||!profile.meals.length)){toast(t('mealRequired'));return}if(editing){profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();renderAll();show('profile');document.getElementById('nav').classList.remove('hidden');toast(t('profileEditDone'));return}if(step<steps.length-1){step++;renderStep();return}finishProfile()}catch(e){console.error('nextStep failed',e);const q=document.getElementById('question');if(q)q.innerHTML='<div class="info">Произошла ошибка на этом шаге. Обнови страницу и попробуй ещё раз.</div><div class="actions"><button class="primary" onclick="window.location.reload()">Обновить</button></div>';}}
+function nextStep(){try{const s=steps[step];if(!s)throw new Error('Не найден шаг регистрации: '+step);if(s.type==='age'){const el=document.getElementById('ageInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value;saveProfile()}if(s.type==='text'){const el=document.getElementById('textInput');profile[s.key]=(el?.value||'').trim()||t(s.key==='allergies'?'noAllergy':'noDislike')}if(s.key==='budget'&&profile.budget==='Свой бюджет'){const el=document.getElementById('customBudget');profile.customBudget=(el?.value||'').trim()||t('budgetOwn')}if(s.type==='single'&&!profile[s.key]){toast(t('choose'));return}if(s.key==='meals'&&(!profile.meals||!profile.meals.length)){toast(t('mealRequired'));return}if(editing){profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();renderAll();show('profile');document.getElementById('nav').classList.remove('hidden');toast(t('profileEditDone'));return}if(step<steps.length-1){step++;if(step===1){renderGoalFallback();return}try{renderStep()}catch(e){console.error('step render failed',e);if(steps[step]?.type==='single')renderSimpleSingleStep();else throw e}return}finishProfile()}catch(e){console.error('nextStep failed',e);const q=document.getElementById('question');if(q)q.innerHTML='<div class="info">Произошла ошибка на этом шаге. Обнови страницу и попробуй ещё раз.</div><div class="actions"><button class="primary" onclick="window.location.reload()">Обновить</button></div>';}}
 function prevStep(){if(step>0){step--;renderStep()}}
 function finishProfile(){profile.language=lang;if(!profile.meals||!profile.meals.length){toast(t('mealRequired'));return}profile.plan=buildPlan();profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();editing=false;renderAll();show('home');document.getElementById('nav').classList.remove('hidden');toast(t('saved'))}
 function updateHomeSummary(){const el=document.getElementById('homeMealCount');const meta=document.getElementById('homeMealMeta');if(!el||!meta)return;const n=Array.isArray(profile?.plan)?profile.plan.length:0;el.textContent=n?n:'—';meta.textContent=n?(n===1?'Приём пищи запланирован':`Приёмов пищи сегодня: ${n}`):'Сначала составь свой рацион';}
