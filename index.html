@@ -411,7 +411,35 @@ function togglePref(k,v){profile.mealPrefs=profile.mealPrefs||{};profile.mealPre
 function addCustomPref(k){const el=document.getElementById('customPref-'+k);const v=(el?.value||'').trim();if(!v)return;profile.mealPrefsCustom=profile.mealPrefsCustom||{};profile.mealPrefsCustom[k]=profile.mealPrefsCustom[k]||[];if(!profile.mealPrefsCustom[k].includes(v))profile.mealPrefsCustom[k].push(v);saveProfile();toast(t('customPrefAdded'));renderStep()}
 function removeCustomPref(k,v){profile.mealPrefsCustom=profile.mealPrefsCustom||{};profile.mealPrefsCustom[k]=(profile.mealPrefsCustom[k]||[]).filter(x=>x!==v);saveProfile();renderStep()}
 function quickText(k,v){profile[k]=decodeURIComponent(v);renderStep()}
-function nextStep(){try{const s=steps[step];if(!s)throw new Error('Не найден шаг регистрации: '+step);if(s.type==='age'){const el=document.getElementById('ageInput');const value=Number(el?.value);if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}profile.age=value;saveProfile()}if(s.type==='text'){const el=document.getElementById('textInput');profile[s.key]=(el?.value||'').trim()||t(s.key==='allergies'?'noAllergy':'noDislike')}if(s.key==='budget'&&profile.budget==='Свой бюджет'){const el=document.getElementById('customBudget');profile.customBudget=(el?.value||'').trim()||t('budgetOwn')}if(s.type==='single'&&!profile[s.key]){toast(t('choose'));return}if(s.key==='meals'&&(!profile.meals||!profile.meals.length)){toast(t('mealRequired'));return}if(editing){profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();renderAll();show('profile');document.getElementById('nav').classList.remove('hidden');toast(t('profileEditDone'));return}if(step<steps.length-1){step++;if(step===1){renderGoalFallback();return}try{renderStep()}catch(e){console.error('step render failed',e);if(steps[step]?.type==='single')renderSimpleSingleStep();else throw e}return}finishProfile()}catch(e){console.error('nextStep failed',e);const q=document.getElementById('question');if(q)q.innerHTML='<div class="info">Произошла ошибка на этом шаге. Обнови страницу и попробуй ещё раз.</div><div class="actions"><button class="primary" onclick="window.location.reload()">Обновить</button></div>';}}
+function nextStep(){
+  const s=steps[step];
+  if(!s){console.error('Unknown step',step);return;}
+  if(s.type==='age'){
+    const el=document.getElementById('ageInput');
+    const value=Number(el?.value);
+    if(!Number.isInteger(value)||value<6||value>120){toast(t('ageError'));return}
+    profile.age=value;saveProfile();
+    step=1;
+    renderGoalFallback();
+    return;
+  }
+  if(s.key==='goal'){
+    if(!profile.goal){toast(t('choose'));return}
+    step=2;renderSimpleSingleStep();return;
+  }
+  if(s.type==='text'){
+    const el=document.getElementById('textInput');
+    profile[s.key]=(el?.value||'').trim()||t(s.key==='allergies'?'noAllergy':'noDislike');
+  }
+  if(s.key==='budget'&&profile.budget==='Свой бюджет'){
+    const el=document.getElementById('customBudget');profile.customBudget=(el?.value||'').trim()||t('budgetOwn');
+  }
+  if(s.type==='single'&&!profile[s.key]){toast(t('choose'));return}
+  if(s.key==='meals'&&(!profile.meals||!profile.meals.length)){toast(t('mealRequired'));return}
+  if(editing){profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();renderAll();show('profile');document.getElementById('nav').classList.remove('hidden');toast(t('profileEditDone'));return}
+  if(step<steps.length-1){step++;renderStep();return}
+  finishProfile();
+}
 function prevStep(){if(step>0){step--;renderStep()}}
 function finishProfile(){profile.language=lang;if(!profile.meals||!profile.meals.length){toast(t('mealRequired'));return}profile.plan=buildPlan();profile.updatedAt=new Date().toISOString();saveProfile();syncProfileCloud();editing=false;renderAll();show('home');document.getElementById('nav').classList.remove('hidden');toast(t('saved'))}
 function updateHomeSummary(){const el=document.getElementById('homeMealCount');const meta=document.getElementById('homeMealMeta');if(!el||!meta)return;const n=Array.isArray(profile?.plan)?profile.plan.length:0;el.textContent=n?n:'—';meta.textContent=n?(n===1?'Приём пищи запланирован':`Приёмов пищи сегодня: ${n}`):'Сначала составь свой рацион';}
